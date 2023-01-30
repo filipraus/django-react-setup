@@ -4,18 +4,14 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 
 # Prompt the user for the project directory and name 
-read -p "Enter the project directory: " project_directory
+read -p "Enter the project directory: " work_directory
 read -p "Enter the project name: " project_name
 
 
 # Change into the Development directory
-mkdir -p ~/$project_directory
-mkdir -p ~/$project_directory/$project_name
-cd ~/$project_directory/$project_name
-
-
-# Install docker and docker-compose
-echo "Follow the official instruction at https://docs.docker.com/engine/install/fedora/"
+mkdir -p ~/$work_directory
+mkdir -p ~/$work_directory/$project_name
+cd ~/$work_directory/$project_name
 
 
 # Create virtual environment
@@ -153,5 +149,5 @@ git commit -m "Initial commit with Django REST and React setup."
 
   
 # Activate the environment
-# cd ~/$project_directory/$project_name
+# cd ~/$work_directory/$project_name
 pipenv shell
