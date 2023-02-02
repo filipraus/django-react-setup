@@ -1,5 +1,6 @@
 const path = require("path");
 const webpack = require("webpack");
+const BundleTracker = require('webpack-bundle-tracker');
 
 module.exports = {
     entry: "./src/index.js",
@@ -7,6 +8,13 @@ module.exports = {
         path: path.resolve(__dirname, "./build/static"),
         filename: "[name].js",
     },
+    // entry: {
+    //     base: '../core/static/js/base.js'
+    // },
+    // output: {
+    //     path: path.resolve("../static/js/bundles"),
+    //     filename: "[name].js",
+    // },
     module: {
         rules: [
             {
@@ -25,6 +33,7 @@ module.exports = {
             },
         ],
     },
+    watch: true,
     optimization: {
         minimize: true,
     },
@@ -34,5 +43,6 @@ module.exports = {
                 NODE_ENV: JSON.stringify("development"),
             },
         }),
+        new BundleTracker({filename: './webpack-stats.json'}),
     ],
 };

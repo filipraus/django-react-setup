@@ -15,7 +15,7 @@ The setup.sh provide a complete setup for Django REST framework and React applic
 1. Clone the repository by running the following command:
 
 ```
-git clone https://github.com/<username>/django-react-setup.git
+git clone https://github.com/filipraus/django-react-setup.git
 ```
 
 2. Change the directory to 'django-react-setup':

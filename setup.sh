@@ -19,14 +19,24 @@ pipenv --python 3.11
 
 
 # Install Django and the dependencies for the React app in the pipenv environment
-pipenv install django djangorestframework django-cors-headers django-webpack-loader node npm
+pipenv install django djangorestframework django-cors-headers django-webpack-loader libsass django-compressor django-sass-processor pytest-watch node npm
+
+
+# Install django-webpack-loader
+# pip install django-webpack-loader
+# pip freeze > requirements.txt
 
   
 # Create the Django project and app
 pipenv run django-admin startproject config
-mv config source
-cd source
+mv -R ./config/* .
 pipenv run python manage.py startapp core
+
+
+# Build templates, static and tests folder structure
+cp -r $SCRIPT_DIR/project/templates ./
+cp -r $SCRIPT_DIR/project/core/templates ./core
+rm ./core/tests.py
 
 
 # Make and run initial migrations
@@ -51,103 +61,93 @@ pipenv run npm install
 # Configure Webpack - hybrid
 pipenv run npm install --save-dev webpack-cli webpack-bundle-tracker
 cp $SCRIPT_DIR/project/frontend/webpack.config.js .
-
-# Include the following in the settings.py
-# WEBPACK_LOADER = {
-#     'DEFAULT': {
-#         'CACHE': not DEBUG,
-#         'BUNDLE_DIR_NAME': './js/bundles/',
-#         'STATS_FILE': os.path.join(BASE_DIR, 'webpack-stats.json'),
-#         'POLL_INTERVAL': 0.1,
-#         'TIMEOUT': None,
-#         'IGNORE': ['.+\.hot-update.js', '.+\.map']
-#     }
-# }
+echo -e "\n\nWEBPACK_LOADER = {\n    'DEFAULT': {\n    'CACHE': not DEBUG,\n    'BUNDLE_DIR_NAME': 'js/bundles/',\n    'STATS_FILE': os.path.join(BASE_DIR, 'frontend/webpack-stats.json'),\n    'POLL_INTERVAL': 0.1,\n    'IGNORE': [r'.+\.hot-update.js', r'.+\.map'],\n  }\n}" >> ./config/settings.py
 
 
 # Install and configure Babel - hybrid
 pipenv run npm install --save-dev @babel/core babel-loader @babel/preset-env @babel/preset-react svg-inline-loader axios
-sed -i '/"scripts":/a \ \ \  "start-development": "webpack --mode development --watch",' ./source/frontend/package.json
-sed -i '/start-development/a \ \ \  "build-production": "react-scripts build && webpack --config webpack.config.js --mode production",' ./source/frontend/package.json
-cp $SCRIPT_DIR/project/frontend/.babelrc.js ./source/frontend/
+sed -i '/"scripts":/a \ \ \  "start-development": "webpack --mode development --watch",' ./package.json
+sed -i '/start-development/a \ \ \  "build-production": "react-scripts build && webpack --config webpack.config.js --mode production",' ./package.json
+cp $SCRIPT_DIR/project/frontend/.babelrc.js .
+
+
+# Configure Sass Stylesheet
+pipenv run npm install --save-dev sass
+mv ./src/App.css ./src/App.scss
 
 
 # Configure proxy
-cp ./source/frontend/package.json package.json
-rm ./source/frontend/package.json
-jq '. += { "proxy": "http://localhost:8000" }' package.json > ./source/frontend/package.json
+cp ./frontend/package.json package.json
+rm ./frontend/package.json
+jq '. += { "proxy": "http://localhost:8000" }' package.json > ./frontend/package.json
 # rm package.json
 
 
-# Change to the source directory
-cd ../..
+# Change to the project directory
+cd ~/$work_directory/$project_name
 
 
 # Configure docker
-cp $SCRIPT_DIR/project/Dockerfile ./source
-cp $SCRIPT_DIR/project/frontend/Dockerfile ./source/core
-cp $SCRIPT_DIR/project/docker-compose.yml ./source 
-
-
-# Configure template folders
-mkdir templates; mkdir ./core/templates
+cp $SCRIPT_DIR/project/Dockerfile .
+cp $SCRIPT_DIR/project/frontend/Dockerfile ./frontend
+cp $SCRIPT_DIR/project/docker-compose.yml . 
 
 
 # Configure settings.py
-sed -i "/'django.contrib.staticfiles',/a\ \ \ \ 'rest_framework'," ./source/config/settings.py
-sed -i "/'rest_framework',/a\ \ \ \ 'corsheaders'," ./source/config/settings.py
-sed -i "/'corsheaders',/a\ \ \ \ 'core'," ./source/config/settings.py
-sed -i "/'django.middleware.clickjacking.XFrameOptionsMiddleware',/a\ \ \ \ 'corsheaders.middleware.CorsMiddleware'," ./source/config/settings.py
-sed -i "s/ALLOWED_HOSTS = \[\]/ALLOWED_HOSTS = \[\ \n \ \ \ 'http:\/\/localhost:3000\',\n\]/g" ./source/config/settings.py
-sed -i '/STATIC_URL = '\''static\/'\''/a STATICFILES_DIRS = [ \n    "'core\/static'",\n    BASE_DIR + "'frontend\/static\/js'"\n]' ./source/config/settings.py
+sed -i "/from pathlib import Path/a import os" ./config/settings.py
+sed -i "/'django.contrib.staticfiles',/a\ \ \ \ 'rest_framework'," ./config/settings.py
+sed -i "/'rest_framework',/a\ \ \ \ 'corsheaders'," ./config/settings.py
+sed -i "/'corsheaders',/a\ \ \ \ 'webpack_loader'," ./config/settings.py
+sed -i "/'webpack_loader',/a\ \ \ \ 'sass_processor'," ./config/settings.py
+sed -i "/'sass_processor',/a\ \ \ \ 'core'," ./config/settings.py
+sed -i "/'django.middleware.clickjacking.XFrameOptionsMiddleware',/a\ \ \ \ 'corsheaders.middleware.CorsMiddleware'," ./config/settings.py
+sed -i "s/ALLOWED_HOSTS = \[\]/ALLOWED_HOSTS = \[\ \n \ \ \ 'localhost\',\n    '127.0.0.1',\n    '0.0.0.0'\n\]/g" ./config/settings.py
+sed -i '/STATIC_URL = '\''static\/'\''/a STATICFILES_DIRS = [ \n    os.path.join(BASE_DIR, "'static'"),\n    os.path.join(BASE_DIR, "'core\/static'"),\n    os.path.join(BASE_DIR, "'frontend\/build\/static'")\n]' ./config/settings.py
+sed -i '/STATIC_URL = '\''static\/'\''/a STATICFILES_FINDERS = [ \n    "'django.contrib.staticfiles.finders.FileSystemFinder'",\n    "'django.contrib.staticfiles.finders.AppDirectoriesFinder'",\n    "'sass_processor.finders.CssFinder'"\n]' ./config/settings.py
+sed -i '/DEBUG = True/a\ \nCORS_ORIGIN_WHITELIST = [\n    "'http://localhost:8000'",\n    "'http://localhost:3000'"\n]' ./config/settings.py
 
 
 # Configure config/urls.py
-sed -i -e "s/from django.urls import path/from django.urls import path, include/" ./source/config/urls.py
-sed '/urlpatterns = \[/a \ \ \ \ ('', include("core.urls")),' -i ./source/config/urls.py
+sed -i -e "s/from django.urls import path/from django.urls import path, include/" ./config/urls.py
+sed '/urlpatterns = \[/a \ \ \ \ ("", include("core.urls")),' -i ./config/urls.py
 
 
 # Configure core/urls.py
-touch ./source/core/urls.py
-echo -e "from django.urls import path \n \n \nurlpatterns = [\n\n]" >> ./source/core/urls.py
-
-
-# Configure CORS origin list
-# CORS_ORIGIN_WHITELIST = [
-#     'http://localhost:3000'
-# ]
+touch ./core/urls.py
+echo -e "from django.urls import path \n \n \nurlpatterns = [\n\n]" >> ./core/urls.py
 
 
 # Initialize a git repository, create .gitignore
 git init
+touch .gitignore
 
-# Iterate through each line in the ./source/frontend/.gitignore
+
+# Iterate through each line in the ./frontend/.gitignore
 while read line; do
     # Check if the line starts with a dot
     if [[ ${line:0:1} == "." ]]; then
-        # Remove the dot and append "./source/frontend/" in front
-        echo -e "./source/frontend/${line:1}\n" >> .gitignore
-	elif [[ ${line:0:1} == "." ]]; then
-		echo -e "$line\n" >> .gitignore
-	elif [[ ${line:0:1} == "" ]]; then
-		echo -e "\n" >> .gitignore
-    else
-        # Append "./source/frontend/" in front
-        echo -e "./source/frontend/$line\n" >> .gitignore
+        # Remove the dot and append "./frontend/" in front
+        echo -e "./frontend/.${line:1}" >> .gitignore
+	elif [[ ${line:0:1} == "/" ]]; then
+		echo -e "./frontend/${line:1}" >> .gitignore
+	elif [[ ${line:0:1} == "#" ]]; then
+		echo -e "\n# ${line:1}" >> .gitignore
     fi
-done < ./source/frontend/.gitignore
+done < ./frontend/.gitignore
 
-# rm ./source/frontend/.gitignore
+rm ./frontend/.gitignore
 
-echo "./source/frontend/node_modules" >> .gitignore  
-echo "./source/db.sqlite3" >> .gitignore
+
+# Add other files to be ignored
+echo "./db.sqlite3" >> .gitignore
+echo ".pytest_cache"
+echo "./core/migrations"
+
+
+# Copy the start-developing.sh
+cp $SCRIPT_DIR/start-developing.sh .
 
 
 # Make the initial commit
 git add .
 git commit -m "Initial commit with Django REST and React setup."
-
-  
-# Activate the environment
-# cd ~/$work_directory/$project_name
-pipenv shell
