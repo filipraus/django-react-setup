@@ -29,7 +29,9 @@ pipenv install django djangorestframework django-cors-headers django-webpack-loa
   
 # Create the Django project and app
 pipenv run django-admin startproject config
-mv -R ./config/* .
+mv -v ./config/* .
+mv -v ./config/config/* ./config
+rm ./config/config
 pipenv run python manage.py startapp core
 
 
@@ -73,7 +75,7 @@ cp $SCRIPT_DIR/project/frontend/.babelrc.js .
 
 # Configure Sass Stylesheet
 pipenv run npm install --save-dev sass
-mv ./src/App.css ./src/App.scss
+# mv ./src/App.css ./src/App.scss
 
 
 # Configure proxy

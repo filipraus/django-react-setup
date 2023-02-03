@@ -1,0 +1,28 @@
+stages:
+  - build
+  - test
+  - deploy
+
+# Build stage
+
+build_backend:
+  stage: build
+
+build_frontend:
+  stage: build
+
+# Test stage
+
+test_backend:
+  stage: test
+
+test_frontend:
+  stage: test
+
+test_integration:
+  stage: test
+
+# Deploy stage
+
+deploy_to_aws:
+  stage: deploy
