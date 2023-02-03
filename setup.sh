@@ -111,7 +111,7 @@ sed -i '/DEBUG = True/a\ \nCORS_ORIGIN_WHITELIST = [\n    "'http://localhost:800
 
 # Configure config/urls.py
 sed -i -e "s/from django.urls import path/from django.urls import path, include/" ./config/urls.py
-sed '/urlpatterns = \[/a \ \ \ \ ("", include("core.urls")),' -i ./config/urls.py
+sed '/urlpatterns = \[/a \ \ \ \ path("", include("core.urls")),' -i ./config/urls.py
 
 
 # Configure core/urls.py
@@ -129,9 +129,9 @@ while read line; do
     # Check if the line starts with a dot
     if [[ ${line:0:1} == "." ]]; then
         # Remove the dot and append "./frontend/" in front
-        echo -e "./frontend/.${line:1}" >> .gitignore
+        echo -e "frontend/.${line:1}" >> .gitignore
 	elif [[ ${line:0:1} == "/" ]]; then
-		echo -e "./frontend/${line:1}" >> .gitignore
+		echo -e "frontend/${line:1}" >> .gitignore
 	elif [[ ${line:0:1} == "#" ]]; then
 		echo -e "\n# ${line:1}" >> .gitignore
     fi
@@ -142,8 +142,8 @@ rm ./frontend/.gitignore
 
 # Add other files to be ignored
 echo "./db.sqlite3" >> .gitignore
-echo ".pytest_cache"
-echo "./core/migrations"
+echo ".pytest_cache" >> .gitignore
+echo "core/migrations" >> .gitignore
 
 
 # Copy the start-developing.sh
